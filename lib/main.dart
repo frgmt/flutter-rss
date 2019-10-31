@@ -1,5 +1,11 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
 import './list.dart';
+import './models/rss.dart';
 
 void main() => runApp(RssApp());
 
@@ -18,45 +24,66 @@ class RssApp extends StatelessWidget {
   }
 }
 
- class RssListPage extends StatelessWidget {
-  final List<String> names = [
-    'ニュース',
-    '国際情勢',
-  ];
+ class RssListPage extends StatefulWidget {
+  RssListPage({Key key}) : super(key: key);
 
-  final List<String> urls = [
-    'https://news.yahoo.co.jp/pickup/rss.xml',
-    'https://news.yahoo.co.jp/pickup/world/rss.xml'
-  ];
+  @override
+  _RssListPageState createState() => _RssListPageState();
+}
+
+class _RssListPageState extends State<RssListPage> {
+  Future<List<Rss>> _rssList;
+
+  @override
+  void initState() {
+    super.initState();
+    _rssList = _fetchRssList();
+  }
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Yahoo RSS'),
       ),
       body: Center(
-        child: ListView(
-          padding: EdgeInsets.all(10.0),
-          children: items(context),
+        child: FutureBuilder(
+          future: _rssList,
+          builder: (context, snapshot) {
+            return ListView.builder(
+              itemCount: snapshot.data != null ? snapshot.data.length : 0,
+              itemBuilder: (context, index) {
+                Rss rss = snapshot.data[index];
+                return Column(
+                  children: <Widget>[
+                    ListTile(
+                      contentPadding: EdgeInsets.all(10.0),
+                      title: Text(rss.name, style: TextStyle(fontSize: 24.0),),
+                      onTap: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => RssPage(title: rss.name, url: rss.url)));
+                      }
+                    )
+                  ],
+                );
+              }
+            );
+          }
         ),
       )
     );
   }
 
-  List<Widget> items(BuildContext context) {
-    List<Widget> items = [];
-    for (var i = 0; i < names.length; i++) {
-      items.add(
-        ListTile(
-          contentPadding: EdgeInsets.all(10.0),
-          title: Text(names[i], style: TextStyle(fontSize: 24.0),),
-          onTap: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => RssPage(title: names[i], url: urls[i])));
-          }
-        )
-      );
+  Future<List<Rss>> _fetchRssList() async {
+    var url = "https://fragment-datafiles.s3-ap-northeast-1.amazonaws.com/test/rss.json";
+    final response = await http.get(url,
+        headers: {"Content-Type": "application/json"});
+
+    if (response.statusCode == 200) {
+      final parsed = json.decode(response.body).cast<Map<String, dynamic>>();
+      return parsed.map<Rss>((json) => Rss.fromJson(json)).toList();
+    } else {
+      throw Exception('Failed to load post');
     }
-    return items;
   }
 }

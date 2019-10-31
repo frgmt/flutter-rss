@@ -1,0 +1,10 @@
+[ 
+   { 
+      "name":"news",
+      "url":"https://news.yahoo.co.jp/pickup/rss.xml"
+   },
+   { 
+      "name":"international",
+      "url":"https://news.yahoo.co.jp/pickup/world/rss.xml"
+   }
+]
